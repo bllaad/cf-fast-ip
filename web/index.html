@@ -1,130 +1,111 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html>
+
 <head>
 <meta charset="UTF-8">
-<title>CF 节点测速仪表盘</title>
+<title>CF 节点控制台 PRO</title>
 
 <style>
 body {
+  margin:0;
   font-family: Arial;
-  background: #0f172a;
-  color: #fff;
-  padding: 20px;
+  background:#0b1220;
+  color:#fff;
 }
 
-h2 {
-  color: #38bdf8;
+header {
+  padding:20px;
+  background:#111827;
+  font-size:20px;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+  padding:20px;
+}
+
+.card {
+  background:#111827;
+  padding:15px;
+  border-radius:10px;
 }
 
 table {
-  width: 100%;
+  width:100%;
   border-collapse: collapse;
-  margin-top: 20px;
 }
 
-th, td {
-  padding: 10px;
-  border-bottom: 1px solid #334155;
-  text-align: left;
+td,th {
+  padding:8px;
+  border-bottom:1px solid #1f2937;
 }
 
-tr:hover {
-  background: #1e293b;
-}
-
-.badge {
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-}
-
-.good { background: #16a34a; }
-.mid { background: #f59e0b; }
-.bad { background: #ef4444; }
+.good {color:#22c55e;}
+.mid {color:#facc15;}
+.bad {color:#ef4444;}
 </style>
 
 </head>
 
 <body>
 
-<h2>🚀 CF 优选节点测速仪表盘</h2>
+<header>🚀 CF 节点控制台 PRO</header>
 
-<table>
-<thead>
-<tr>
-<th>IP</th>
-<th>延迟</th>
-<th>国家</th>
-<th>状态</th>
-</tr>
-</thead>
+<div class="grid">
 
-<tbody id="list"></tbody>
+<div class="card">
+<h3>⚡ 节点排行榜</h3>
+<table id="table"></table>
+</div>
 
-</table>
+<div class="card">
+<h3>📊 状态统计</h3>
+<div id="stats"></div>
+</div>
+
+</div>
 
 <script>
 
-const url = "https://raw.githubusercontent.com/bllaad/cf-fast-ip/main/result.txt";
-
-function ping(ip) {
-    return new Promise(resolve => {
-        let start = performance.now();
-
-        fetch("https://" + ip.split(":")[0], {mode: "no-cors"})
-        .then(() => {
-            let ms = Math.round(performance.now() - start);
-            resolve(ms);
-        })
-        .catch(() => resolve(9999));
-    });
-}
-
 async function load() {
-    let res = await fetch(url);
-    let text = await res.text();
 
-    let lines = text.trim().split("\n");
+const res = await fetch("https://你的worker域名.workers.dev");
+const data = await res.json();
 
-    let results = [];
+let html = "<tr><th>IP</th><th>延迟</th><th>国家</th></tr>";
 
-    for (let line of lines) {
+let good=0, mid=0, bad=0;
 
-        let ip = line.split("#")[0];
-        let cc = line.split("#")[1] || "--";
+data.forEach(d => {
 
-        let ms = await ping(ip);
+if(d.latency < 80) good++;
+else if(d.latency < 200) mid++;
+else bad++;
 
-        results.push({ip, cc, ms});
-    }
+html += `
+<tr>
+<td>${d.ip}</td>
+<td class="${d.latency<80?'good':d.latency<200?'mid':'bad'}">
+${d.latency}ms
+</td>
+<td>${d.cc}</td>
+</tr>`;
+});
 
-    results.sort((a,b) => a.ms - b.ms);
+document.getElementById("table").innerHTML = html;
 
-    let html = "";
+document.getElementById("stats").innerHTML = `
+🟢 快速: ${good}<br>
+🟡 中等: ${mid}<br>
+🔴 超时: ${bad}
+`;
 
-    for (let r of results) {
-
-        let status = r.ms < 80 ? "good" :
-                     r.ms < 200 ? "mid" : "bad";
-
-        let emoji = r.ms < 80 ? "🟢" :
-                    r.ms < 200 ? "🟡" : "🔴";
-
-        html += `
-        <tr>
-            <td>${r.ip}</td>
-            <td>${r.ms}ms</td>
-            <td>${r.cc}</td>
-            <td><span class="badge ${status}">${emoji}</span></td>
-        </tr>`;
-    }
-
-    document.getElementById("list").innerHTML = html;
 }
 
 load();
-
-setInterval(load, 60000);
+setInterval(load, 10000);
 
 </script>
 
