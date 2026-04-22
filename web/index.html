@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>CF 节点测速仪表盘</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: #fff;
+  padding: 20px;
+}
+
+h2 {
+  color: #38bdf8;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #334155;
+  text-align: left;
+}
+
+tr:hover {
+  background: #1e293b;
+}
+
+.badge {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.good { background: #16a34a; }
+.mid { background: #f59e0b; }
+.bad { background: #ef4444; }
+</style>
+
+</head>
+
+<body>
+
+<h2>🚀 CF 优选节点测速仪表盘</h2>
+
+<table>
+<thead>
+<tr>
+<th>IP</th>
+<th>延迟</th>
+<th>国家</th>
+<th>状态</th>
+</tr>
+</thead>
+
+<tbody id="list"></tbody>
+
+</table>
+
+<script>
+
+const url = "https://raw.githubusercontent.com/bllaad/cf-fast-ip/main/result.txt";
+
+function ping(ip) {
+    return new Promise(resolve => {
+        let start = performance.now();
+
+        fetch("https://" + ip.split(":")[0], {mode: "no-cors"})
+        .then(() => {
+            let ms = Math.round(performance.now() - start);
+            resolve(ms);
+        })
+        .catch(() => resolve(9999));
+    });
+}
+
+async function load() {
+    let res = await fetch(url);
+    let text = await res.text();
+
+    let lines = text.trim().split("\n");
+
+    let results = [];
+
+    for (let line of lines) {
+
+        let ip = line.split("#")[0];
+        let cc = line.split("#")[1] || "--";
+
+        let ms = await ping(ip);
+
+        results.push({ip, cc, ms});
+    }
+
+    results.sort((a,b) => a.ms - b.ms);
+
+    let html = "";
+
+    for (let r of results) {
+
+        let status = r.ms < 80 ? "good" :
+                     r.ms < 200 ? "mid" : "bad";
+
+        let emoji = r.ms < 80 ? "🟢" :
+                    r.ms < 200 ? "🟡" : "🔴";
+
+        html += `
+        <tr>
+            <td>${r.ip}</td>
+            <td>${r.ms}ms</td>
+            <td>${r.cc}</td>
+            <td><span class="badge ${status}">${emoji}</span></td>
+        </tr>`;
+    }
+
+    document.getElementById("list").innerHTML = html;
+}
+
+load();
+
+setInterval(load, 60000);
+
+</script>
+
+</body>
+</html>
