@@ -2,6 +2,7 @@
 🟢 1. 最快100个IP（主订阅）
 
 https://raw.githubusercontent.com/bllaad/cf-fast-ip/main/result.txt
+
 📌 说明：
 	•	自动保留最快 100 个节点
 	•	用于全局代理 / 主线路
