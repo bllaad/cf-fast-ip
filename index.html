@@ -1,29 +1,119 @@
 <!DOCTYPE html>
 <html>
-
 <head>
 <meta charset="UTF-8">
-<title>CF Fastest 100 Nodes</title>
+<title>CF 浏览器测速仪表盘</title>
+
+<style>
+body{
+  background:#0b1220;
+  color:#fff;
+  font-family:Arial;
+  padding:20px;
+}
+
+table{
+  width:100%;
+  border-collapse: collapse;
+}
+
+th,td{
+  padding:8px;
+  border-bottom:1px solid #1f2937;
+}
+
+.good{color:#22c55e;}
+.mid{color:#facc15;}
+.bad{color:#ef4444;}
+
+h2{color:#38bdf8}
+</style>
+
 </head>
 
 <body>
 
-<h2>Cloudflare Fastest 100 Nodes</h2>
+<h2>🚀 CF 浏览器测速面板</h2>
 
-<pre id="list"></pre>
+<table>
+<thead>
+<tr>
+<th>IP</th>
+<th>延迟</th>
+<th>国家</th>
+</tr>
+</thead>
+
+<tbody id="list"></tbody>
+</table>
 
 <script>
 
-fetch("result.txt")
-.then(res => res.text())
-.then(data => {
+const url = "https://raw.githubusercontent.com/bllaad/cf-fast-ip/main/result.txt";
 
-document.getElementById("list").innerText = data
+function ping(ip){
+  return new Promise(resolve => {
 
-})
+    let start = performance.now();
+
+    fetch("https://" + ip.split(":")[0], {
+      mode: "no-cors"
+    })
+    .then(() => {
+      let ms = Math.round(performance.now() - start);
+      resolve(ms);
+    })
+    .catch(() => resolve(9999));
+
+  });
+}
+
+async function load(){
+
+let res = await fetch(url);
+let text = await res.text();
+
+let lines = text.trim().split("\n");
+
+let results = [];
+
+for(let line of lines){
+
+  let ip = line.split("#")[0];
+  let cc = line.split("#")[1] || "--";
+
+  let ms = await ping(ip);
+
+  results.push({ip,cc,ms});
+}
+
+// 排序（核心）
+results.sort((a,b)=>a.ms-b.ms);
+
+let html = "";
+
+for(let r of results){
+
+let status = r.ms < 80 ? "good" :
+             r.ms < 200 ? "mid" : "bad";
+
+html += `
+<tr>
+<td>${r.ip}</td>
+<td class="${status}">${r.ms}ms</td>
+<td>${r.cc}</td>
+</tr>`;
+}
+
+document.getElementById("list").innerHTML = html;
+
+}
+
+load();
+
+setInterval(load, 60000);
 
 </script>
 
 </body>
-
 </html>
