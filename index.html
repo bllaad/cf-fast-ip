@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<title>CF Fastest 100 Nodes</title>
+</head>
+
+<body>
+
+<h2>Cloudflare Fastest 100 Nodes</h2>
+
+<pre id="list"></pre>
+
+<script>
+
+fetch("result.txt")
+.then(res => res.text())
+.then(data => {
+
+document.getElementById("list").innerText = data
+
+})
+
+</script>
+
+</body>
+
+</html>
