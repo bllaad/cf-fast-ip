@@ -1,17 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+<meta charset="UTF-8">
+<title>CF IP 浏览器测速</title>
+
+<style>
+body{
+  background:#0b1220;
+  color:#fff;
+  font-family:Arial;
+  padding:20px;
+}
+
+h2{color:#38bdf8}
+
+table{
+  width:100%;
+  border-collapse: collapse;
+  margin-top:10px;
+}
+
+th,td{
+  padding:8px;
+  border-bottom:1px solid #1f2937;
+}
+
+.good{color:#22c55e;}
+.mid{color:#facc15;}
+.bad{color:#ef4444;}
+</style>
+
+</head>
+
+<body>
+
+<h2>🚀 CF 浏览器测速面板</h2>
+
+<table>
+<thead>
+<tr>
+<th>IP</th>
+<th>延迟</th>
+<th>国家</th>
+</tr>
+</thead>
+
+<tbody id="list"></tbody>
+
+</table>
+
+<script>
+
+const url = "https://raw.githubusercontent.com/bllaad/cf-fast-ip/main/result.txt";
+
+/* =========================
+   1. ping函数（稳定版）
+========================= */
 function ping(ip){
   return new Promise(resolve => {
 
     let start = performance.now();
-
-    const img = new Image();
     let host = ip.split(":")[0];
 
-    img.onload = img.onerror = () => {
-      resolve(Math.round(performance.now() - start));
+    const img = new Image();
+    let done = false;
+
+    const finish = (val) => {
+      if(!done){
+        done = true;
+        resolve(val);
+      }
     };
 
-    img.src = "https://" + host + "/favicon.ico?x=" + Date.now();
+    img.onload = () => finish(Math.round(performance.now() - start));
+    img.onerror = () => finish(Math.round(performance.now() - start));
 
-    setTimeout(() => resolve(9999), 3000);
+    img.src = "https://" + host + "/favicon.ico?" + Date.now();
+
+    setTimeout(() => finish(9999), 3000);
   });
 }
+
+/* =========================
+   2. 主逻辑
+========================= */
+async function load(){
+
+try{
+
+  const res = await fetch(url);
+  const text = await res.text();
+
+  console.log("RAW:", text); // 调试
+
+  if(!text){
+    document.getElementById("list").innerHTML =
+    "<tr><td colspan='3'>❌ 没有获取到IP数据</td></tr>";
+    return;
+  }
+
+  let lines = text.trim().split("\n").filter(Boolean);
+
+  console.log("LINES:", lines.length);
+
+  let results = [];
+
+  for(let i=0;i<lines.length;i++){
+
+    let line = lines[i];
+
+    let ip = line.split("#")[0];
+    let cc = line.split("#")[1] || "--";
+
+    let ms = await ping(ip);
+
+    results.push({ip,cc,ms});
+  }
+
+  // 排序（核心）
+  results.sort((a,b)=>a.ms-b.ms);
+
+  let html = "";
+
+  for(let r of results){
+
+    let status =
+      r.ms < 80 ? "good" :
+      r.ms < 200 ? "mid" : "bad";
+
+    html += `
+    <tr>
+      <td>${r.ip}</td>
+      <td class="${status}">${r.ms}ms</td>
+      <td>${r.cc}</td>
+    </tr>`;
+  }
+
+  document.getElementById("list").innerHTML = html;
+
+}catch(err){
+
+  console.log(err);
+
+  document.getElementById("list").innerHTML =
+  "<tr><td colspan='3'>❌ 加载失败</td></tr>";
+
+}
+
+}
+
+/* =========================
+   3. 启动
+========================= */
+load();
+
+setInterval(load, 60000);
+
+</script>
+
+</body>
+</html>
